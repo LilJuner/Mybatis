@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="edu.javaee.mybatis.dao.CustomerMapper">
+
+    <sql id="customerColumns">
+        id,username,jobs,t_phone
+    </sql>
+    <!--基于Mapper代理开发
+        1.id为方法名
+        2.parameterType为方法的参数类型
+        3.resultType为方法的返回值类型-->
+    <select id="findCustomerById" parameterType="integer"
+            resultMap="resultCustomer">
+      select <include refid="customerColumns"/> from t_customer where id = #{id}
+    </select>
+
+    <!--建立表的映射-->
+    <resultMap id="resultCustomer" type="edu.javaee.mybatis.entity.Customer">
+        <id property="id" column="id"/>
+        <result property="username" column="username"/>
+        <result property="jobs" column="jobs"/>
+        <result property="phone" column="t_phone"/>
+
+    </resultMap>
+
+    <!-- 模糊查询 可以防止sql注入-->
+    <select id="findCustomerByName" parameterType="edu.javaee.mybatis.entity.Customer"
+                     resultMap="resultCustomer">
+      <bind name="pattern_username" value="'%'+username+'%'"/>
+      select <include refid="customerColumns"/> from t_customer where username like #{pattern_username}
+    </select>
+
+
+    <select id="findCustomerByNameAndJobs"
+            parameterType="edu.javaee.mybatis.entity.Customer"
+            resultMap="resultCustomer">
+        select <include refid="customerColumns"/> from t_customer
+        <where>
+            <if test="username !=null and username !=''">
+                and username = #{username}
+            </if>
+            <if test="jobs!=null and jobs!=''">
+                and jobs = #{jobs}
+            </if>
+        </where>
+    </select>
+
+
+    <insert id="addCustomer"
+            useGeneratedKeys="true"
+            keyProperty="id"
+            parameterType="edu.javaee.mybatis.entity.Customer">
+        insert into t_customer(username,jobs,t_phone)
+        values(#{username},#{jobs},#{phone})
+    </insert>
+
+    <update id="updateCustomer" parameterType="edu.javaee.mybatis.entity.Customer">
+        update t_customer
+        <set>
+            <if test="username!=null and username!=''">
+                username = #{username}
+            </if>
+            <if test="jobs!=null and jobs!=''">
+                jobs = #{jobs}
+            </if>
+            <if test="phone!=null and phone!=''">
+                t_phone = #{phone}
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteCustomer" parameterType="list">
+            delete from t_customer where id in
+            <foreach collection="list" item="id" index="index"
+                     open="(" separator="," close=")">
+                 #{id}
+            </foreach>
+    </delete>
+
+    <select id ="findCustomersFullById"
+            parameterType="integer" resultMap="customersFullResult">
+            SELECT c.`id`,c.`username`,c.`jobs`,c.`t_phone`,i.`id`,i.`code`,o.`id`,o.`number`
+            FROM t_customer c,t_idcard i,t_order o
+            WHERE c.`idcard_id` = i.`id` AND c.`id` = o.`customer_id`
+            AND c.`id` = 1;
+
+    </select>
+
+    <resultMap id="customersFullResult" type="edu.javaee.mybatis.entity.Customer">
+            <id property="id" column="id"/>
+            <result property="username" column="username"/>
+            <result property="jobs" column="jobs"/>
+            <result property="phone" column="t_phone"/>
+
+            <association property="idCard" javaType="edu.javaee.mybatis.entity.IdCard">
+                <id property="id" column="idcard_id"/>
+                <result property="code" column="code"/>
+            </association>
+            
+            <collection property="orders" ofType="edu.javaee.mybatis.entity.Order">
+                <id property="id" column="oid"/>
+                <result property="number" column="number"/>
+            </collection>
+    </resultMap>
+
+</mapper>
